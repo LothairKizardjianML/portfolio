@@ -28,6 +28,14 @@ body {
   color: #fff;
 }
 
+.mdx-body h1,
+.mdx-body h2,
+.mdx-body h3,
+.mdx-body pre,
+.mdx-body [data-rehype-pretty-code-figure] {
+  text-align: left;
+}
+
 .mdx-body [data-rehype-pretty-code-figure] pre {
   background: rgba(0, 0, 0, 0.4);
   border: 1px solid rgba(255, 255, 255, 0.08);

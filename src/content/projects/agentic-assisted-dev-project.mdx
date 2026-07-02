@@ -1,0 +1,57 @@
+---
+title: "Agentic assisted dev project"
+tagline: "Dev project at Airbus Geo (Toulouse) assisted with AI agents."
+year: "2024-today"
+order: 1
+role: "Solo developer"
+stack: ["Python", "Gemini", "RabbitMQ", "Docker", "Kubernetes", "Gitlab CI/CD", "Vault", "S3", "Helm", "GraphRAG"]
+repo: "private Airbus repo"
+---
+
+## Overview
+
+In a team that manages the exploitation of earth imagery satellites at Airbus GEO (Toulouse),
+I developed a backend software that helps them by automating tasks/tools that they were doing by hand.
+My software saves them precious time that they can use to do more productive things.
+
+Before I arrived they were either runing tools via a crontab on a vm or by hand when some tasks weren't "cron possible".
+One of those task was to save their context (logs, database states ...) in case something went wrong and they needed a previous working
+state to either rollback to or to check the state before the error occured. To do so they add to connect to their vm,
+run several commands one after another, always check if everything was going okay between each command, and then save this big context
+on a separate nfs. All this takes around 30 minutes to 1 hour depending on the size of the context to save. They had multiple tasks like
+this one that they were doing daily or weekly and that consumed them a lot of time, time they could use better.
+
+When I arrived I made an audit of all those tasks they were runing by hand, and all those cron script that weren't saved anywhere or tracked.
+I then started to develop a software that would pack up all those tools, orchestrate, deploy and track them.
+
+## What I built
+
+- Custom character controller on top of Phaser Arcade Physics
+- Variable-height jumps, coyote time, jump buffering
+- Air control tuned separately from ground control
+- Wall slide + wall jump with directional launch
+- Fixed-timestep game loop decoupled from render rate
+- Seeded RNG so runs are reproducible from a seed
+
+## Why it is interesting
+
+The whole codebase is TDD-first — physics math, RNG systems, damage formulas all start with a Vitest case. Strict module boundaries: gameplay never imports rendering, so headless tests work end-to-end.
+
+Example — the variable-jump math:
+
+```ts
+export function computeJumpVelocity(
+  heldTime: number,
+  minHold: number,
+  maxHold: number,
+  minVy: number,
+  maxVy: number
+): number {
+  const t = clamp((heldTime - minHold) / (maxHold - minHold), 0, 1);
+  return lerp(minVy, maxVy, t);
+}
+```
+
+## Next up
+
+Netcode, room generation from tagged tiles, and a bigger power pool.

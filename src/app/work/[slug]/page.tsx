@@ -49,7 +49,7 @@ export default async function ProjectPage({
       <article className="max-w-3xl mx-auto">
         <ProjectHeader project={project} />
 
-        <div className="mdx-body">
+        <div className="mdx-body max-w-[560px] mx-auto text-justify hyphens-auto">
           <MDXRemote
             source={project.body}
             components={mdxComponents}
