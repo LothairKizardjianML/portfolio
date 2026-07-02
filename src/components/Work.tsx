@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import Link from "next/link";
 import { projects } from "@/content/projects";
 
 export default function Work() {
@@ -25,10 +26,8 @@ export default function Work() {
             viewport={{ once: true, margin: "-80px" }}
             transition={{ duration: 0.6, delay: i * 0.08, ease: [0.22, 1, 0.36, 1] }}
           >
-            <a
-              href={p.href ?? "#"}
-              target={p.href ? "_blank" : undefined}
-              rel={p.href ? "noreferrer" : undefined}
+            <Link
+              href={`/work/${p.slug}`}
               className="group flex flex-col md:flex-row md:items-center justify-between gap-4 py-10 md:py-14"
             >
               <div className="flex-1">
@@ -55,7 +54,7 @@ export default function Work() {
                   ))}
                 </div>
               </div>
-            </a>
+            </Link>
           </motion.li>
         ))}
       </ul>
