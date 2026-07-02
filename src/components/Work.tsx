@@ -1,4 +1,4 @@
-import { getAllProjects } from "@/content/projects";
+import { getAllProjects } from "@/content/projects_loader";
 import WorkList from "./WorkList";
 
 export default function Work() {

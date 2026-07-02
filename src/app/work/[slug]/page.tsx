@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { MDXRemote } from "next-mdx-remote/rsc";
 import rehypePrettyCode from "rehype-pretty-code";
-import { getAllProjects, getProject } from "@/content/projects";
+import { getAllProjects, getProject } from "@/content/projects_loader";
 import { mdxComponents } from "@/components/mdx";
 import ProjectHeader from "./ProjectHeader";
 
