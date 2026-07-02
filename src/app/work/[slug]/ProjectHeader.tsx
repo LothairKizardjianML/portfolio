@@ -1,18 +1,11 @@
 "use client";
 
 import { motion } from "framer-motion";
-import Link from "next/link";
 import type { Project } from "@/content/projects";
 
-export default function ProjectContent({
-  project,
-  next,
-}: {
-  project: Project;
-  next: Project;
-}) {
+export default function ProjectHeader({ project }: { project: Project }) {
   return (
-    <article className="max-w-3xl mx-auto">
+    <>
       <motion.header
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
@@ -82,46 +75,6 @@ export default function ProjectContent({
           </div>
         )}
       </motion.dl>
-
-      <div className="flex flex-col gap-16">
-        {project.sections.map((s, i) => (
-          <motion.section
-            key={i}
-            initial={{ opacity: 0, y: 40 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-80px" }}
-            transition={{ duration: 0.6, delay: i * 0.05 }}
-          >
-            {s.heading && (
-              <h2 className="text-2xl md:text-3xl font-semibold tracking-tight mb-6">
-                {s.heading}
-              </h2>
-            )}
-            <p className="text-lg leading-relaxed text-muted whitespace-pre-wrap">
-              {s.body}
-            </p>
-          </motion.section>
-        ))}
-      </div>
-
-      <motion.div
-        initial={{ opacity: 0, y: 40 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true, margin: "-80px" }}
-        transition={{ duration: 0.6 }}
-        className="mt-32 pt-16 border-t border-white/10"
-      >
-        <p className="font-mono text-xs text-muted mb-4">Next project</p>
-        <Link
-          href={`/work/${next.slug}`}
-          className="group inline-flex items-baseline gap-4"
-        >
-          <span className="text-3xl md:text-5xl font-semibold tracking-tight transition-transform group-hover:translate-x-2">
-            {next.title}
-          </span>
-          <span className="text-accent">→</span>
-        </Link>
-      </motion.div>
-    </article>
+    </>
   );
 }

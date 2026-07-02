@@ -28,6 +28,29 @@ body {
   color: #fff;
 }
 
+.mdx-body [data-rehype-pretty-code-figure] pre {
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.5rem;
+  padding: 1.25rem;
+  margin: 2rem 0;
+  overflow-x: auto;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.mdx-body [data-rehype-pretty-code-figure] code {
+  background: transparent;
+  border: none;
+  padding: 0;
+  font-size: inherit;
+}
+
+.mdx-body [data-rehype-pretty-code-figure] code > span {
+  display: block;
+}
+
 .noise::before {
   content: "";
   position: fixed;

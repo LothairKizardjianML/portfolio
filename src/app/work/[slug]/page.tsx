@@ -1,14 +1,22 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { projects, getProject } from "@/content/projects";
-import ProjectContent from "./ProjectContent";
+import { MDXRemote } from "next-mdx-remote/rsc";
+import rehypePrettyCode from "rehype-pretty-code";
+import { getAllProjects, getProject } from "@/content/projects";
+import { mdxComponents } from "@/components/mdx";
+import ProjectHeader from "./ProjectHeader";
 
 export function generateStaticParams() {
-  return projects.map((p) => ({ slug: p.slug }));
+  return getAllProjects().map((p) => ({ slug: p.slug }));
 }
 
-export function generateMetadata({ params }: { params: { slug: string } }) {
-  const project = getProject(params.slug);
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = await params;
+  const project = getProject(slug);
   if (!project) return { title: "Not found" };
   return {
     title: `${project.title} — Lothair Kizardjian`,
@@ -16,12 +24,18 @@ export function generateMetadata({ params }: { params: { slug: string } }) {
   };
 }
 
-export default function ProjectPage({ params }: { params: { slug: string } }) {
-  const project = getProject(params.slug);
+export default async function ProjectPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = await params;
+  const project = getProject(slug);
   if (!project) notFound();
 
-  const idx = projects.findIndex((p) => p.slug === params.slug);
-  const next = projects[(idx + 1) % projects.length];
+  const all = getAllProjects();
+  const idx = all.findIndex((p) => p.slug === slug);
+  const next = all[(idx + 1) % all.length];
 
   return (
     <main className="noise flex-1 relative pt-32 pb-32 px-6 md:px-12">
@@ -31,7 +45,43 @@ export default function ProjectPage({ params }: { params: { slug: string } }) {
       >
         ← back to work
       </Link>
-      <ProjectContent project={project} next={next} />
+
+      <article className="max-w-3xl mx-auto">
+        <ProjectHeader project={project} />
+
+        <div className="mdx-body">
+          <MDXRemote
+            source={project.body}
+            components={mdxComponents}
+            options={{
+              mdxOptions: {
+                rehypePlugins: [
+                  [
+                    rehypePrettyCode,
+                    {
+                      theme: "github-dark",
+                      keepBackground: false,
+                    },
+                  ],
+                ],
+              },
+            }}
+          />
+        </div>
+
+        <div className="mt-32 pt-16 border-t border-white/10">
+          <p className="font-mono text-xs text-muted mb-4">Next project</p>
+          <Link
+            href={`/work/${next.slug}`}
+            className="group inline-flex items-baseline gap-4"
+          >
+            <span className="text-3xl md:text-5xl font-semibold tracking-tight transition-transform group-hover:translate-x-2">
+              {next.title}
+            </span>
+            <span className="text-accent">→</span>
+          </Link>
+        </div>
+      </article>
     </main>
   );
 }

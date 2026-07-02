@@ -1,9 +1,8 @@
-export type ProjectSection = {
-  heading?: string;
-  body: string;
-};
+import fs from "node:fs";
+import path from "node:path";
+import matter from "gray-matter";
 
-export type Project = {
+export type ProjectMeta = {
   slug: string;
   title: string;
   tagline: string;
@@ -13,60 +12,24 @@ export type Project = {
   link?: string;
   repo?: string;
   cover?: string;
-  sections: ProjectSection[];
+  order?: number;
 };
 
-export const projects: Project[] = [
-  {
-    slug: "hell-vs-heaven",
-    title: "Hell vs Heaven",
-    tagline: "2D co-op roguelike platformer with a PvP finale.",
-    year: "2026",
-    stack: ["TypeScript", "Phaser 3", "Vite", "Vitest"],
-    role: "Solo developer",
-    repo: "https://github.com/LothairKizardjianML/hell_vs_heaven",
-    sections: [
-      {
-        heading: "Overview",
-        body: "Two players team up as either Hell or Heaven, run through procedurally selected rooms, and assemble a build from roguelike upgrades. The run ends with a Brawlhalla-style PvP arena where Hell fights Heaven using the builds earned in PvE.",
-      },
-      {
-        heading: "What I built",
-        body: "Custom Brawlhalla-style character controller on top of Phaser Arcade Physics — variable-height jumps, coyote time, jump buffering, air control, wall slide, and wall jump. Fixed-timestep game loop decoupled from render rate. Seeded RNG for reproducible runs.",
-      },
-      {
-        heading: "Why it is interesting",
-        body: "The whole codebase is TDD-first — physics math, RNG systems, damage formulas all start with a Vitest case. Strict module boundaries: gameplay never imports rendering, so headless tests work end-to-end.",
-      },
-    ],
-  },
-  {
-    slug: "project-two",
-    title: "Project Two",
-    tagline: "Short punchy description of the thing.",
-    year: "2025",
-    stack: ["Next.js", "TypeScript"],
-    sections: [
-      {
-        heading: "Overview",
-        body: "Replace this with a real writeup. Talk about the problem, the constraints, and what you shipped.",
-      },
-    ],
-  },
-  {
-    slug: "project-three",
-    title: "Project Three",
-    tagline: "Another thing worth showing off.",
-    year: "2025",
-    stack: ["Rust", "WebAssembly"],
-    sections: [
-      {
-        heading: "Overview",
-        body: "Replace this with a real writeup.",
-      },
-    ],
-  },
-];
+export type Project = ProjectMeta & { body: string };
 
-export const getProject = (slug: string) =>
-  projects.find((p) => p.slug === slug);
+const POSTS_DIR = path.join(process.cwd(), "src/content/projects");
+
+export function getAllProjects(): Project[] {
+  const files = fs.readdirSync(POSTS_DIR).filter((f) => f.endsWith(".mdx"));
+  const projects = files.map((file) => {
+    const slug = file.replace(/\.mdx$/, "");
+    const raw = fs.readFileSync(path.join(POSTS_DIR, file), "utf-8");
+    const { data, content } = matter(raw);
+    return { slug, ...(data as Omit<ProjectMeta, "slug">), body: content };
+  });
+  return projects.sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
+}
+
+export function getProject(slug: string): Project | undefined {
+  return getAllProjects().find((p) => p.slug === slug);
+}
