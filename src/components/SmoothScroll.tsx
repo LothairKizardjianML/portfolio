@@ -8,6 +8,10 @@ export default function SmoothScroll() {
     const lenis = new Lenis({
       lerp: 0.1,
       smoothWheel: true,
+      prevent: (node) =>
+        node.nodeName === "PRE" ||
+        node.nodeName === "CODE" ||
+        !!(node as HTMLElement).closest?.("pre, code, table"),
     });
 
     let rafId: number;
