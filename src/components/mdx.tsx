@@ -54,7 +54,7 @@ export const mdxComponents: MDXComponents = {
   ),
   pre: (props) => (
     <pre
-      className="my-8 p-5 rounded-lg border border-white/10 bg-black/40 overflow-x-auto text-sm font-mono leading-relaxed"
+      className="my-8 p-5 rounded-lg border border-white/10 bg-black/40 text-sm font-mono leading-relaxed whitespace-pre-wrap break-words"
       {...props}
     />
   ),

@@ -46,6 +46,9 @@ body {
   font-family: var(--font-geist-mono), monospace;
   font-size: 0.875rem;
   line-height: 1.6;
+  white-space: pre;
+  word-break: normal;
+  overscroll-behavior-x: contain;
 }
 
 .mdx-body [data-rehype-pretty-code-figure] code {
