@@ -64,6 +64,27 @@ export const mdxComponents: MDXComponents = {
       {...props}
     />
   ),
+  table: (props) => (
+    <div className="my-8 overflow-x-auto">
+      <table
+        className="w-full text-sm border-collapse border border-white/10"
+        {...props}
+      />
+    </div>
+  ),
+  thead: (props) => <thead className="bg-white/5" {...props} />,
+  th: (props) => (
+    <th
+      className="text-left font-mono text-xs uppercase tracking-wider text-muted border border-white/10 px-4 py-3"
+      {...props}
+    />
+  ),
+  td: (props) => (
+    <td
+      className="border border-white/10 px-4 py-3 align-top text-foreground"
+      {...props}
+    />
+  ),
   img: (props) => (
     // eslint-disable-next-line @next/next/no-img-element
     <img

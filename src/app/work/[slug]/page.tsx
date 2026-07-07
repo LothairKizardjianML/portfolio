@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { MDXRemote } from "next-mdx-remote/rsc";
 import rehypePrettyCode from "rehype-pretty-code";
+import remarkGfm from "remark-gfm";
 import { getAllProjects, getProject } from "@/content/projects_loader";
 import { mdxComponents } from "@/components/mdx";
 import ProjectHeader from "./ProjectHeader";
@@ -43,18 +44,19 @@ export default async function ProjectPage({
         href="/#work"
         className="font-mono text-xs text-muted hover:text-foreground transition-colors"
       >
-        ← back to work
+        ← back to projects
       </Link>
 
-      <article className="max-w-3xl mx-auto">
+      <article className="max-w-[818px] mx-auto">
         <ProjectHeader project={project} />
 
-        <div className="mdx-body max-w-[560px] mx-auto text-justify hyphens-auto">
+        <div className="mdx-body text-justify hyphens-auto">
           <MDXRemote
             source={project.body}
             components={mdxComponents}
             options={{
               mdxOptions: {
+                remarkPlugins: [remarkGfm],
                 rehypePlugins: [
                   [
                     rehypePrettyCode,

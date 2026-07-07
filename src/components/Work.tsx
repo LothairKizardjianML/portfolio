@@ -6,7 +6,7 @@ export default function Work() {
   return (
     <section id="work" className="px-6 md:px-12 py-32 md:py-48">
       <h2 className="text-sm font-mono text-accent mb-16">
-        01 — Selected work
+        02 — Selected projects
       </h2>
       <WorkList
         projects={projects.map((p) => ({

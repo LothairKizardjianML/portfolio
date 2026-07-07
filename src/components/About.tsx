@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 
 const words =
-  "I build games, tools, and web experiences. Currently focused on TypeScript, real-time systems, and everything that makes a product feel alive.".split(
+  "Software and DevOps engineer at Airbus Geo (Toulouse). Master's in AI from PSL / PRAIRIE. Currently pivoting from software engineering to agentic engineering — building LLM-agent tooling in production, and learning what actually matters: context, retrieval, and cost.".split(
     " "
   );
 
@@ -17,10 +17,10 @@ export default function About() {
         transition={{ duration: 0.7 }}
         className="text-sm font-mono text-accent mb-16"
       >
-        02 — About
+        01 — About
       </motion.h2>
 
-      <p className="text-3xl md:text-5xl font-semibold tracking-tight leading-tight max-w-4xl flex flex-wrap gap-x-3 gap-y-2">
+      <p className="text-lg md:text-2xl font-medium tracking-tight leading-relaxed max-w-3xl text-muted flex flex-wrap gap-x-2 gap-y-2">
         {words.map((w, i) => (
           <motion.span
             key={`${w}-${i}`}
@@ -33,6 +33,20 @@ export default function About() {
           </motion.span>
         ))}
       </p>
+
+      <motion.a
+        href="/cv.pdf"
+        target="_blank"
+        rel="noreferrer"
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, margin: "-50px" }}
+        transition={{ duration: 0.6, delay: 0.4 }}
+        className="mt-12 inline-flex items-center gap-2 px-5 py-3 rounded-full border border-white/15 font-mono text-sm hover:border-accent hover:text-accent transition-colors"
+      >
+        Download CV
+        <span aria-hidden>↓</span>
+      </motion.a>
     </section>
   );
 }

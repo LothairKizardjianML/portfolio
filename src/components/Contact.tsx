@@ -27,7 +27,7 @@ export default function Contact() {
       >
         <a
           href="mailto:kizardjian.lothair@gmail.com"
-          className="block text-4xl md:text-7xl font-semibold tracking-tight hover:text-accent transition-colors"
+          className="block text-2xl md:text-4xl font-medium tracking-tight text-muted hover:text-accent transition-colors"
         >
           kizardjian.lothair@gmail.com →
         </a>
@@ -40,11 +40,13 @@ export default function Contact() {
           >
             GitHub
           </a>
-          <a href="#" className="hover:text-foreground">
+          <a
+            href="https://www.linkedin.com/in/lothair-kizardjian-32b97a176/"
+            target="_blank"
+            rel="noreferrer"
+            className="hover:text-foreground"
+          >
             LinkedIn
-          </a>
-          <a href="#" className="hover:text-foreground">
-            Twitter
           </a>
         </div>
       </motion.div>

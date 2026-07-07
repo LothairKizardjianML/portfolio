@@ -44,17 +44,8 @@ export default function Hero() {
         >
           Lothair Kizardjian.
           <br />
-          <span className="text-muted">Building things that move.</span>
+          <span className="text-muted">AI Software Engineer.</span>
         </motion.h1>
-        <motion.p
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.6 }}
-          className="mt-8 max-w-xl text-lg text-muted"
-        >
-          Developer working on games, tools, and web experiences. Selected
-          projects below.
-        </motion.p>
       </motion.div>
       <motion.div
         initial={{ opacity: 0 }}

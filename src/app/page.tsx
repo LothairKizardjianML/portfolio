@@ -7,8 +7,8 @@ export default function Home() {
   return (
     <main className="noise flex-1 relative pt-16">
       <Hero />
-      <Work />
       <About />
+      <Work />
       <Contact />
     </main>
   );
