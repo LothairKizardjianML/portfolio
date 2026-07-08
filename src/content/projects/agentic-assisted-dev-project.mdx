@@ -143,7 +143,7 @@ and registers a Graphify skill for Gemini to use.
 
 With this setup in place, I tried implementing a new feature. I described it to the main Gemini agent. It spawned an
 `architect` sub-agent, which used Graphify to query and explain the tools and subjects it had to work on, then produced
-a `TASKS.md` file with a list of subtasks. The main agent then spawned `code_agent` one after the other to implement each
+a `TASKS.md` file with a list of subtasks. The main agent then spawned `code_agent`s one after the other to implement each
 subtask. Each `code_agent` used the Graphify, `pytest`, `pylint`, and `black` skills, corrected the code when any skill
 reported errors, and finally pushed to the branch.
 
@@ -162,6 +162,7 @@ graph up to date automatically. Neither felt clean.
 I had to ask the main agent to fix it. Really sketchy.
 * **Sub-agents explode token usage.** Each sub-agent gets its own context window, and each one has to build its own knowledge
 (Graphify calls, FileSearch, reading code). Total quota grows extremely fast — especially if they all run on a pro-tier model.
+Running the sub-agents on a cost-efficient model like `gemini-3.5-flash` gets the work done without burning the quota.
 
 The numbers made it obvious:
 
@@ -171,9 +172,14 @@ The numbers made it obvious:
 | With sub-agents | 2h | `gemini-3.5-flash` + `gemini-3.1-pro-preview` | 27.4M | 84k | >50% |
 
 Sub-agent session breakdown: `gemini-3.5-flash` — 25M in / 53k out · `gemini-3.1-pro-preview` — 2.4M in / 31k out.
-The pro model is disproportionately expensive per token.
+The pro model is disproportionately expensive per token. So I now use the pro model **only** for the `architect` agent — when
+I need to design a complex solution and break it into subtasks — and the flash model for `code_agent` and `code_reviewer_agent`.
 
-### Phase 6 — Codegraph and a simpler agent setup
+Sub-agents also help me keep the main orchestrator's context clean. All the raw output from `pytest`, `pylint`, `black`, `grep`,
+`find`, etc. runs inside sub-agents and gets thrown away when they finish. The main agent, whose session can last for hours,
+never sees that noise.
+
+### Phase 6 — Codegraph
 
 Some colleagues told me about [Codegraph](https://github.com/colbymchenry/codegraph), an alternative to Graphify focused
 specifically on building a knowledge graph for *code*. It doesn't track unrelated files like YAML, XML, or bash scripts — only
@@ -191,41 +197,7 @@ But it feels much lighter: the whole graph lives in a tiny local SQL database th
 never creates the "Topic X" empty-name nodes Graphify sometimes produced. I switched to Codegraph and immediately noticed
 that my agents' output was better: they took fewer turns to produce working code because they understood the codebase better.
 
-**On the agent setup, I decided to stop using many different sub-agents** — though I might rethink this later. Right now I
-only work with:
-
-* the main Gemini agent (`gemini-3.5-flash`)
-* one `architect` sub-agent (`gemini-3.1-pro-preview`), which I call only when I need a really detailed plan and truly
-  independent subtasks.
-
-Planning phase:
-
-```
-main agent → architect → TASKS.md
-```
-
-Then the main agent loops through the tasks:
-
-```
-for each task N in TASKS.md:
-  main agent writes tests for task N
-  main agent implements task N
-  runs skills (pytest · pylint · black) until green
-  commit + push
-  manually compact main agent context
-```
-
-I found that having a lot of sub-agents generates a lot of duplicate input tokens. Every sub-agent spawn duplicates the system
-context, the rules described in each agent, the global `GEMINI.md`, and sometimes the Codegraph queries — which balloons the
-context really fast. Moving from a main orchestrator + many sub-agents to a single main agent that implements all subtasks
-produced by one architect saves a lot of tokens. Sometimes I don't even compact the session — I just start a fresh one with
-a clean context for the next subtask.
-
-Working like this, my daily sessions rarely exceed 1% of quota when using only the main agent. An `architect` call can eat up to
-10% of quota on its own, so I'm really careful about when to use it — only when I truly need it, e.g. designing a new tool
-that doesn't resemble anything already in the codebase.
-
-At this point my main concern was to save as many tokens as possible, so I started looking for other ways.
+Even with Codegraph in place, I still wanted more token savings, so I started looking for other ways to do so.
 
 ### Phase 7 — Headroom, rtk, and caveman
 
@@ -251,7 +223,8 @@ most-called command at 89 runs) saves ~57%. The heavy hitters aren't the fancy c
 constantly.
 
 Finally, an honorable mention: **[Caveman](https://github.com/JuliusBrussee/caveman/blob/main/README.md)**. It makes the agent
-speak in "caveman" style (like we can see in the above rtk screenshot), cutting filler words and reducing output tokens —
+speak in "caveman" style (visible in the "Unga Bunga chief!" line at the bottom of the rtk screenshot above), cutting filler
+words and reducing output tokens —
 which matters, because output tokens are the expensive ones. I only recommend it for personal use — I don't think a chatbot
 that speaks like a caveman would go over well with customers (though who knows). On top of that, working with a caveman agent
 is genuinely fun, and it even boosted my productivity because I was in a good mood.
@@ -376,6 +349,7 @@ Two years of iteration compressed into a handful of rules I now trust:
 - **Skills should be atomic tool-invocations.** Behavior belongs in agent instructions, not skills.
 - **Context is the constraint.** Everything else — model choice, sub-agents, retrieval — is downstream.
 - **Retrieval unlocks code navigation.** Without a graph (Codegraph), agents brute-force by reading files.
-- **Fewer sub-agents beat many sub-agents.** Duplicated context is an invisible cost.
+- **Match the model to the sub-agent's job.** Reserve pro-tier for planning; use flash for coding and reviewing. Same pipeline, a fraction of the cost.
+- **Sub-agents protect the main context.** Isolate noisy tool output inside short-lived sub-agents so the orchestrator's session stays clean over long hours.
 - **Fresh sessions can beat manual compaction.** Cheap, clean, effective.
 - **Token optimization compounds.** Proxies (rtk, Headroom) layered on top of context discipline multiply the savings.
