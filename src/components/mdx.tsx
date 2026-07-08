@@ -88,7 +88,8 @@ export const mdxComponents: MDXComponents = {
   img: (props) => (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      className="rounded-lg my-8 w-full"
+      className="rounded-lg my-8 w-full h-auto"
+      loading="eager"
       alt={props.alt ?? ""}
       {...props}
     />

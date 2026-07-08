@@ -21,8 +21,22 @@ export default function SmoothScroll() {
     };
     rafId = requestAnimationFrame(raf);
 
+    const resizeObserver = new ResizeObserver(() => lenis.resize());
+    resizeObserver.observe(document.body);
+
+    const handleLoad = () => lenis.resize();
+    window.addEventListener("load", handleLoad);
+
+    document.querySelectorAll("img").forEach((img) => {
+      if (!img.complete) {
+        img.addEventListener("load", handleLoad, { once: true });
+      }
+    });
+
     return () => {
       cancelAnimationFrame(rafId);
+      resizeObserver.disconnect();
+      window.removeEventListener("load", handleLoad);
       lenis.destroy();
     };
   }, []);
