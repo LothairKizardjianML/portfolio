@@ -52,13 +52,7 @@ only the relevant chunks, not whole documents, are injected into the prompt.
 
 ## Architecture
 
-```
-PDFs → load → chunk → embed (snowflake-arctic) → Chroma
-                                                    │
-question → embed → cosine top-k ────────────────────┘
-                        │
-        system prompt + retrieved chunks + question → Llama 3.1 8B (Ollama) → answer
-```
+![RAG chatbot architecture: PDFs are loaded, chunked, embedded and stored in Chroma; each question is embedded, matched against stored chunks with cosine similarity, combined into a prompt and answered by Llama 3.1 8B via Ollama](/images/rag-architecture.svg)
 
 ## Where it stands
 
