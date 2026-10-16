@@ -1,70 +1,109 @@
 ---
 title: "Local RAG chatbot"
-tagline: "A chatbot grounded in my own documents, running fully offline on a single 8 GB GPU."
+tagline: "A chatbot answering from my own documents, running 100% locally on an 8 GB GPU."
 year: "2026–present"
 order: 2
 role: "Solo developer"
-stack: ["Python", "Ollama", "Llama 3.1 8B", "Embeddings", "Chroma", "LangChain"]
+stack: ["Python", "Ollama", "Llama 3.1 8B", "Embeddings", "Chroma", "LangChain", "Claude Code"]
 ---
 
 ## Overview
 
-A personal project to understand RAG (Retrieval-Augmented Generation) and local LLM hosting from first principles, rather
-than gluing together a framework I can't explain. The goal: a chatbot that answers questions from my own documents,
-with everything — model, embeddings, vector store — running locally on one RTX 3070 (8 GB VRAM).
-
-The project is work in progress, and I'm following a learning roadmap: each building block is chosen, justified and
-verified on real hardware before moving on.
+I wanted to understand RAG, not just use it. I knew "you embed
+documents, you search them, you give the result to the model", and that was about it. So I started this project to build a chatbot that answers from my own documents, with everything (model, embeddings, vector store) running on my
+own machine: a single RTX 3070 with 8 GB of VRAM. It is still in progress, so this page is more of a logbook than a
+finished case study.
 
 ## TL;DR
 
-- Local inference with **Ollama** serving **Llama 3.1 8B** (Q4_K_M, 4.9 GB), queried through its HTTP API.
-- Documents are embedded with **snowflake-arctic-embed:33m** (~67 MB) so both models fit in VRAM at the same time.
-- Chunking with a recursive splitter, storage in **Chroma**, top-k retrieval feeding the prompt.
-- Currently: building the ingestion pipeline (PDF loading → chunking → embedding → storage).
+- Llama 3.1 8B (4-bit) served locally by Ollama, queried through its HTTP API.
+- Documents embedded with `snowflake-arctic-embed:33m`, stored in Chroma.
+- The 8 GB of VRAM is the constraint behind almost every choice I made.
+- Claude Code works as my tutor and is not allowed to write the solution for me.
 
-## Key decisions
+## The journey
 
-### The 8 GB VRAM budget drives everything
+### Phase 1 — Setting the rules
 
-An 8B model at fp16 needs ~16 GB, so it can't fit. 4-bit quantization brings it to 4.9 GB. I measured the real usage with
-`nvidia-smi`: ~5.7 GB once the KV cache is allocated, and background apps took another ~1.4 GB — so the real headroom
-is much tighter than the theoretical one. That's why I rejected `qwen3.5:9b` (6.6 GB quantized, too tight) and picked
-Llama 3.1 8B.
+I didn't want a project where an agent writes everything and I end up with a working app I can't explain. I had already
+lived that with Gemini at work (see the other project), so this time I did the opposite. I wrote a `CLAUDE.md` that
+turns Claude into a tutor: it asks me questions, tells me if my answer is right, partially right or wrong, and it
+never writes the code that solves the current task. I write it, it reviews. A `Tasks.md` holds the roadmap and
+a `Progress.md` the log of each session, so the next session picks up where the last one stopped.
 
-### Two models, one GPU
+It is slower, obviously. But I came out of each session knowing why, not only how.
 
-The chat model and the embedding model have to be resident at the same time: reloading one at every message would make
-the chatbot unresponsive. Hence the very small embedding model.
+### Phase 2 — Fitting an LLM in 8 GB
 
-### Retrieval design
+First question: which runtime? I picked **Ollama**. It handles the VRAM / layer offloading by itself, it has a registry
+of already quantized models and it runs as a local HTTP server that I can call from my own code.
 
-- **Similarity:** cosine similarity, which compares direction (meaning) and ignores magnitude.
-- **Chunking:** recursive splitting (paragraph → line → sentence → word) with overlap, to avoid cutting mid-sentence and losing continuity.
-  Chunks that are too big dilute the embedding; too small, they lose context.
-- **Vector store:** Chroma in embedded mode. Persistence and metadata filtering are plumbing, not the part of RAG I want
-  to learn, so I delegated them to a tested library.
+Then the model. An 8B model in fp16 is 16 GB, so it doesn't fit. I worked out quantization on my own before it was even
+named: if each parameter takes fewer bits, and several small values can be packed in one byte, 4 bits per parameter
+gives around 0.5 byte each, hence ~4 GB for 8B parameters. I mixed up the unit prefixes at some point (I skipped "kilo"
+between bytes and GB), got corrected, and moved on.
 
-### Context window
+I looked at three candidates:
 
-When the KV cache fills up, Ollama silently evicts the oldest tokens, including possibly the system prompt. This is why
-only the relevant chunks, not whole documents, are injected into the prompt.
+| Model | Quantized size | Verdict |
+|---|---:|---|
+| `qwen3.5:9b` | 6.6 GB | Only 1.4 GB left for context, too tight |
+| `ornith:9b` | – | Fine-tuned for agentic coding, wrong job for a general chatbot |
+| `llama3.1:8b` (Q4_K_M) | 4.9 GB | ~3.1 GB of headroom, very well documented |
 
-## Architecture
+The `qwen` one taught me that real K-quant sizes are bigger than the naive "bytes per parameter" maths. I went with Llama 3.1 8B.
+
+Then I checked the theory on the real machine, with `nvidia-smi` and the Windows Task Manager. Ollama was using ~5.7 GB:
+the 4.9 GB of weights plus ~0.8 GB for the KV cache and the compute buffers. And my "3.1 GB of headroom" was a lie:
+Discord, Opera GX and Windows itself already took ~1.4 GB, so I really had less than 1 GB left. That number changed
+how I looked at everything that came after.
+
+### Phase 3 — Talking to the model
+
+I wanted to call the API myself and not just chat in a terminal. Three errors in a row, one after the other:
+
+1. `WRONG_VERSION_NUMBER`: I was using `https://` on a plain HTTP server.
+2. `405 Method Not Allowed`: I forgot the `/api/chat` path.
+3. A typo in the model name: `ollama3.1:8b` instead of `llama3.1:8b`.
+
+Not glorious, but reading the real stack traces taught me more than any tutorial. I also learned that the API streams
+by default (`"stream": false` gives a single response), and what happens when the context window is full: Ollama
+silently drops the oldest tokens, system prompt included. No crash, no warning, the model just forgets. This is the reason
+why I will only send the relevant chunks to the model and never whole documents.
+
+### Phase 4 — Embeddings, chunking and the vector store
+
+For the retrieval part I wrote the idea down myself: embed the query, compute the cosine similarity against the stored
+chunks, take the top-k and give *only those* to the LLM. Cosine is just `dot(a, b) / (norm(a) * norm(b))`, it ignores
+the magnitude and only compares directions, which is what I want for meaning.
+
+* **Embedding model:** `snowflake-arctic-embed:33m`, ~67 MB. Small, but the real reason is that the embedding model
+and the chat model have to sit in VRAM at the same time. I thought about loading and unloading them, then dropped it:
+reloading at every message would make the chat unusable. And with less than 1 GB of headroom, the smallest one wins.
+* **Chunking:** cutting every N characters breaks sentences and loses what is at the boundary. Overlap fixes part of it,
+and a recursive splitter (paragraph → line → sentence → word) avoids most of the bad cuts. Too small and a chunk loses
+its context, too big and its embedding is diluted over several topics, so it doesn't score high enough to be retrieved.
+* **Vector store:** I first wanted to do it by hand with numpy, to control everything. Then I changed my mind. The
+embeddings and the cosine similarity were the part I wanted to understand, and I had done that. Persistence and metadata
+filtering are plumbing, so I picked **Chroma**.
+
+Here is the whole thing:
 
 ![RAG chatbot architecture: PDFs are loaded, chunked, embedded and stored in Chroma; each question is embedded, matched against stored chunks with cosine similarity, combined into a prompt and answered by Llama 3.1 8B via Ollama](/images/rag-architecture.svg)
 
-## Where it stands
+## Where I am now
 
-Done: runtime, model, quantization and context-window choices; embeddings, chunking and vector-store choices;
-a modular Python app (singleton config, logger, Ollama client) calling the chat and embedding APIs, and PDF discovery
-from an ingestion folder.
+The app is split in small modules (a singleton config, a logger, an Ollama client for chat and embeddings) and it
+already finds the PDFs in the ingestion folder. I am using three public JWST documents as a test set. I also run
+[Codegraph](https://github.com/colbymchenry/codegraph) on the code, like in my other project.
 
-Next: ingestion into Chroma, retrieval sanity checks, prompt template, a "no relevant context" behavior, then a small
-API and chat UI, and finally an evaluation of retrieval and answer quality.
+What's left to build is the actual ingestion into Chroma, the first retrieval tests (do the chunks I get back
+make sense?), the prompt template and the behavior when nothing relevant is found. After that: a small API,
+a chat UI, and an honest evaluation of the answers.
 
 ## What I took away so far
 
-- **Measure, don't trust the theory.** Real VRAM numbers differed from my estimates because of everything else on the GPU.
-- **Pick the smallest thing that works** when two components share a tight resource.
-- **Delegate plumbing, keep the learning.** Hand-write what teaches RAG; use libraries for the rest.
+- **Measure it.** My VRAM estimate was off by a lot because of everything else running on the GPU.
+- **Resources shared by two models change the choices.** I would not have picked such a small embedding model otherwise.
+- **Write the parts that teach you, delegate the plumbing.**
+- **An agent can be a tutor.** Asking Claude not to give me the answer was probably the best instruction I wrote in this project.
