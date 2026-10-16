@@ -1,0 +1,76 @@
+---
+title: "Local RAG chatbot"
+tagline: "A chatbot grounded in my own documents, running fully offline on a single 8 GB GPU."
+year: "2026–present"
+order: 2
+role: "Solo developer"
+stack: ["Python", "Ollama", "Llama 3.1 8B", "Embeddings", "Chroma", "LangChain"]
+---
+
+## Overview
+
+A personal project to understand RAG (Retrieval-Augmented Generation) and local LLM hosting from first principles, rather
+than gluing together a framework I can't explain. The goal: a chatbot that answers questions from my own documents,
+with everything — model, embeddings, vector store — running locally on one RTX 3070 (8 GB VRAM).
+
+The project is work in progress, and I'm following a learning roadmap: each building block is chosen, justified and
+verified on real hardware before moving on.
+
+## TL;DR
+
+- Local inference with **Ollama** serving **Llama 3.1 8B** (Q4_K_M, 4.9 GB), queried through its HTTP API.
+- Documents are embedded with **snowflake-arctic-embed:33m** (~67 MB) so both models fit in VRAM at the same time.
+- Chunking with a recursive splitter, storage in **Chroma**, top-k retrieval feeding the prompt.
+- Currently: building the ingestion pipeline (PDF loading → chunking → embedding → storage).
+
+## Key decisions
+
+### The 8 GB VRAM budget drives everything
+
+An 8B model at fp16 needs ~16 GB, so it can't fit. 4-bit quantization brings it to 4.9 GB. I measured the real usage with
+`nvidia-smi`: ~5.7 GB once the KV cache is allocated, and background apps took another ~1.4 GB — so the real headroom
+is much tighter than the theoretical one. That's why I rejected `qwen3.5:9b` (6.6 GB quantized, too tight) and picked
+Llama 3.1 8B.
+
+### Two models, one GPU
+
+The chat model and the embedding model have to be resident at the same time: reloading one at every message would make
+the chatbot unresponsive. Hence the very small embedding model.
+
+### Retrieval design
+
+- **Similarity:** cosine similarity, which compares direction (meaning) and ignores magnitude.
+- **Chunking:** recursive splitting (paragraph → line → sentence → word) with overlap, to avoid cutting mid-sentence and losing continuity.
+  Chunks that are too big dilute the embedding; too small, they lose context.
+- **Vector store:** Chroma in embedded mode. Persistence and metadata filtering are plumbing, not the part of RAG I want
+  to learn, so I delegated them to a tested library.
+
+### Context window
+
+When the KV cache fills up, Ollama silently evicts the oldest tokens, including possibly the system prompt. This is why
+only the relevant chunks, not whole documents, are injected into the prompt.
+
+## Architecture
+
+```
+PDFs → load → chunk → embed (snowflake-arctic) → Chroma
+                                                    │
+question → embed → cosine top-k ────────────────────┘
+                        │
+        system prompt + retrieved chunks + question → Llama 3.1 8B (Ollama) → answer
+```
+
+## Where it stands
+
+Done: runtime, model, quantization and context-window choices; embeddings, chunking and vector-store choices;
+a modular Python app (singleton config, logger, Ollama client) calling the chat and embedding APIs, and PDF discovery
+from an ingestion folder.
+
+Next: ingestion into Chroma, retrieval sanity checks, prompt template, a "no relevant context" behavior, then a small
+API and chat UI, and finally an evaluation of retrieval and answer quality.
+
+## What I took away so far
+
+- **Measure, don't trust the theory.** Real VRAM numbers differed from my estimates because of everything else on the GPU.
+- **Pick the smallest thing that works** when two components share a tight resource.
+- **Delegate plumbing, keep the learning.** Hand-write what teaches RAG; use libraries for the rest.
